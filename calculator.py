@@ -11,6 +11,8 @@ EPSILON = .9
 MAX_EPISODES = 150
 GAMMA = .9
 ALPHA = .1
+TARGET_VALUE = None
+SELECTED_ACTIONS = []
 
 
 def get_operands():
@@ -20,6 +22,8 @@ def get_operands():
         OPERANDS.append(number)
         numbers -= 1
     global OPERANDS_2
+    global TARGET_VALUE
+    TARGET_VALUE = int(input('Enter your target number : '))
     OPERANDS_2 = OPERANDS[:]
 
 
@@ -81,13 +85,15 @@ def choose_action(state, qTable):
 
 def reset_env():
     global OPERANDS
+    global SELECTED_ACTIONS
     OPERANDS = OPERANDS_2[:]
+    SELECTED_ACTIONS = []
     if len(STACK) != 0:
         for i in STACK:
             STACK.pop()
 
 
-def get_env_feedback(state, action, target_number):
+def get_env_feedback(state, action):
     if action == ACTIONS[0]:
         if state == 0 or state == 1 and len(OPERANDS) != 0:
             S_ = state + 1
@@ -108,7 +114,7 @@ def get_env_feedback(state, action, target_number):
             reward = 0
             S_ = 0
         elif state == 2:
-            if len(STACK) == 1 and len(OPERANDS) == 0 and STACK[0] == target_number:
+            if len(STACK) == 1 and len(OPERANDS) == 0 and STACK[0] == TARGET_VALUE:
                 S_ = 'TERMINAL'
                 reward = 1
             elif len(STACK) == 1 and len(OPERANDS) != 0:
@@ -124,39 +130,38 @@ def get_env_feedback(state, action, target_number):
     return S_, reward
 
 
-def update_env(state, episode, stepCounter, action, total_Reward, selecte_actions):
+def update_env(state, episode, stepCounter, action, total_Reward):
     if state == 'TERMINAL':
         print(
             f'terminal reached !!!! \n stack is : ---- {STACK} ----- \n operands is : ---- {OPERANDS} -----')
     else:
-
-        # print(
-        #     f'episode : {episode} \n action in this step : {action} \n total actions : {selecte_actions} \n total reward is : {total_Reward} \n state is {state} !!!! \n stack is : ---- {STACK} ----- \n operands is : ---- {OPERANDS} -----')
         print(
-            f' \n episode : {episode} \n action in this step : {action} \n total reward is : {total_Reward} \n state is {state} !!!! \n stack is : ---- {STACK} ----- \n operands is : ---- {OPERANDS} ----- \n')
+            f'episode : {episode} \n action in this step : {action} \n total actions : {SELECTED_ACTIONS} \n total reward is : {total_Reward} \n state is {state} !!!! \n stack is : ---- {STACK} ----- \n operands is : ---- {OPERANDS} -----')
+        # print(
+        #     f' \n episode : {episode} \n action in this step : {action} \n total reward is : {total_Reward} \n state is {state} !!!! \n stack is : ---- {STACK} ----- \n operands is : ---- {OPERANDS} ----- \n')
 
 
-def rl(target_number):
+def rl():
+    global SELECTED_ACTIONS
     operands = get_operands()
     q_table = create_qTable()
     print(q_table)
     total_Reward = 0
-    selecte_actions = []
     for episode in range(MAX_EPISODES):
         step_counter = 0
         S = 0
         is_terminate = False
         update_env(state=S, episode=episode,
-                   stepCounter=step_counter, action=None, total_Reward=total_Reward, selecte_actions=selecte_actions)
+                   stepCounter=step_counter, action=None, total_Reward=total_Reward)
         while not is_terminate:
             A = choose_action(state=S, qTable=q_table)
 
             S_, R = get_env_feedback(
-                state=S, action=A, target_number=target_number)
+                state=S, action=A)
 
             q_predict = q_table.loc[S, A]
             total_Reward += R
-            selecte_actions.append(A)
+            SELECTED_ACTIONS.append(A)
             if S_ != 'TERMINAL':
                 q_target = R + GAMMA * q_table.iloc[S_, :].max()
             else:
@@ -166,13 +171,12 @@ def rl(target_number):
             q_table.loc[S, A] += ALPHA * (q_target-q_predict)
             S = S_
             update_env(state=S, episode=episode,
-                       stepCounter=step_counter, action=A, total_Reward=total_Reward, selecte_actions=selecte_actions)
+                       stepCounter=step_counter, action=A, total_Reward=total_Reward)
             step_counter += 1
         print('\n', q_table, '\n')
     return q_table
 
 
 if __name__ == "__main__":
-    target = int(input('Enter your target number : '))
-    q_table = rl(target_number=target)
+    q_table = rl()
     # print()
